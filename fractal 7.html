@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Fractal Attractor theo Độ sâu</title>
+    
+    <!-- Tải thư viện MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .info-panel, .canvas-panel {
+            flex: 1;
+            min-width: 400px;
+        }
+        .info-panel {
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .canvas-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            max-width: 100%;
+            height: auto;
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+            width: 100%;
+        }
+        .color-box {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 1px solid #555;
+        }
+        .controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .controls label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .controls input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        #depthValue {
+            font-weight: bold;
+            color: #0077b6;
+        }
+        #squareCount { color: #555; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="info-panel">
+        <h2>Hệ thống 4 Hàm Co (IFS)</h2>
+        <p>Attractor được tạo bởi 4 hàm co. Kéo thanh trượt để thay đổi độ sâu đệ quy của fractal.</p>
+        
+        <!-- Các công thức MathJax không đổi -->
+        <div><h4><span class="color-box" style="background-color: #0077b6;"></span>Hàm f1 (Xanh dương):</h4>$$ f_1 \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} \frac{1}{4} & 0 \\ 0 & \frac{1}{4} \end{pmatrix} \begin{pmatrix} x \\ y \end{pmatrix} + \begin{pmatrix} \frac{1}{4} \\ \frac{1}{4} \end{pmatrix} $$</div>
+        <div><h4><span class="color-box" style="background-color: #d62828;"></span>Hàm f2 (Đỏ):</h4>$$ f_2 \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} \frac{1}{4} & 0 \\ 0 & \frac{1}{4} \end{pmatrix} \begin{pmatrix} x \\ y \end{pmatrix} + \begin{pmatrix} \frac{2}{4} \\ \frac{1}{4} \end{pmatrix} $$</div>
+        <div><h4><span class="color-box" style="background-color: #6a0dad;"></span>Hàm f3 (Tím):</h4>$$ f_3 \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} \frac{1}{4} & 0 \\ 0 & \frac{1}{4} \end{pmatrix} \begin{pmatrix} x \\ y \end{pmatrix} + \begin{pmatrix} \frac{1}{4} \\ \frac{2}{4} \end{pmatrix} $$</div>
+        <div><h4><span class="color-box" style="background-color: #f77f00;"></span>Hàm f4 (Cam):</h4>$$ f_4 \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} \frac{1}{4} & 0 \\ 0 & \frac{1}{4} \end{pmatrix} \begin{pmatrix} x \\ y \end{pmatrix} + \begin{pmatrix} \frac{2}{4} \\ \frac{2}{4} \end{pmatrix} $$</div>
+
+        <div class="controls">
+            <h2>Điều khiển</h2>
+            <label for="depthSlider">Độ sâu (Depth): <span id="depthValue">2</span></label>
+            <input type="range" id="depthSlider" min="1" max="5" step="1" value="2">
+            <p id="squareCount">Số hình vuông: 16</p>
+        </div>
+    </div>
+
+    <div class="canvas-panel">
+        <h2>Trực quan hóa Attractor</h2>
+        <canvas id="fractalCanvas" width="600" height="600"></canvas>
+    </div>
+</div>
+
+<script>
+    // --- LẤY CÁC THÀNH PHẦN HTML ---
+    const canvas = document.getElementById('fractalCanvas');
+    const ctx = canvas.getContext('2d');
+    const depthSlider = document.getElementById('depthSlider');
+    const depthValueDisplay = document.getElementById('depthValue');
+    const squareCountDisplay = document.getElementById('squareCount');
+
+    // --- CÀI ĐẶT CANVAS VÀ CÁC BIẾN ---
+    const width = canvas.width;
+    const height = canvas.height;
+    const padding = 50;
+    const drawWidth = width - 2 * padding;
+    const drawHeight = height - 2 * padding;
+    
+    const COLORS = {
+        f1: '#0077b6', // Xanh dương
+        f2: '#d62828', // Đỏ
+        f3: '#6a0dad', // Tím
+        f4: '#f77f00'  // Cam
+    };
+    // ĐÃ XÓA BG_COLORS KHỎI ĐÂY
+
+    const mapX = (x) => padding + x * drawWidth;
+    const mapY = (y) => height - padding - y * drawHeight;
+
+    // --- CÁC HÀM VẼ NỀN ---
+    function drawBackground() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+        // Vẽ lưới 4x4
+        for (let i = 1; i < 4; i++) {
+            ctx.beginPath(); ctx.moveTo(mapX(i / 4), mapY(0)); ctx.lineTo(mapX(i / 4), mapY(1)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(mapX(0), mapY(i / 4)); ctx.lineTo(mapX(1), mapY(i / 4)); ctx.stroke();
+        }
+        
+        // *** ĐOẠN MÃ VẼ CÁC Ô MÀU NỀN ĐÃ ĐƯỢC XÓA BỎ ***
+        
+        // Vẽ trục tọa độ
+        ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(mapX(0), mapY(0)); ctx.lineTo(mapX(1) + 15, mapY(0)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(mapX(0), mapY(0)); ctx.lineTo(mapX(0), mapY(1) - 15); ctx.stroke();
+        ctx.fillStyle = '#333'; ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText('0', mapX(0) - 10, mapY(0) + 5); ctx.fillText('0.5', mapX(0.5), mapY(0) + 5); ctx.fillText('1.0', mapX(1), mapY(0) + 5); ctx.fillText('x', mapX(1) + 25, mapY(0) - 5);
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText('0.5', mapX(0) - 8, mapY(0.5)); ctx.fillText('1.0', mapX(0) - 8, mapY(1)); ctx.fillText('y', mapX(0) - 5, mapY(1) - 25);
+    }
+
+    // --- THUẬT TOÁN ĐỆ QUY ĐỂ VẼ FRACTAL ---
+    function drawFinalFractal() {
+        const depth = parseInt(depthSlider.value, 10);
+        depthValueDisplay.textContent = depth;
+        squareCountDisplay.textContent = `Số hình vuông: ${(4**depth).toLocaleString('vi-VN')}`;
+
+        drawBackground();
+
+        function generate(x, y, size, currentDepth) {
+            if (currentDepth === 0) {
+                // Đã đến độ sâu cuối cùng, vẽ hình vuông
+                ctx.fillRect(mapX(x), mapY(y + size), size * drawWidth, size * drawHeight);
+                return;
+            }
+
+            // Gọi đệ quy cho 4 hình vuông con
+            const newSize = size / 4;
+            generate(x + size/4, y + size/4, newSize, currentDepth - 1);
+            generate(x + 2*size/4, y + size/4, newSize, currentDepth - 1);
+            generate(x + size/4, y + 2*size/4, newSize, currentDepth - 1);
+            generate(x + 2*size/4, y + 2*size/4, newSize, currentDepth - 1);
+        }
+        
+        // Chạy hàm generate cho từng khu vực với màu tương ứng
+        ctx.fillStyle = COLORS.f1; generate(0.25, 0.25, 0.25, depth - 1);
+        ctx.fillStyle = COLORS.f2; generate(0.50, 0.25, 0.25, depth - 1);
+        ctx.fillStyle = COLORS.f3; generate(0.25, 0.50, 0.25, depth - 1);
+        ctx.fillStyle = COLORS.f4; generate(0.50, 0.50, 0.25, depth - 1);
+    }
+
+    // --- EVENT LISTENER ---
+    depthSlider.addEventListener('input', drawFinalFractal);
+
+    // --- CHẠY LẦN ĐẦU ---
+    drawFinalFractal();
+
+</script>
+
+</body>
+</html>
